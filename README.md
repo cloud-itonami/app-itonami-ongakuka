@@ -44,7 +44,7 @@ ingress capability が qualify した時に **最初に `.kotoba` へ移る部�
 `wrangler.jsonc` が route 2・var 8 を宣言していることに気づけなかった。いまは
 route 表を渡す側が持ち、ページは描くだけなので、両者がずれる余地が無い。
 
-## いま在るもの — 19 ファイル
+## いま在るもの — 20 ファイル
 
 | 面 | ファイル |
 |---|---|
@@ -54,7 +54,7 @@ route 表を渡す側が持ち、ページは描くだけなので、両者が�
 | Worker 設定 | `appview/…/wrangler.jsonc` |
 | actor 記述子 | `appview/…/kotodama.jsonld` |
 | 設計 | `AGENTS.md` / `MIGRATION-TODO.md` |
-| 由来・権利・識別 | `NOTICE` / `PROJECT.jsonld` / `README.edn` / `migration.edn` |
+| 由来・権利・識別 | `NOTICE` / `PROJECT.jsonld` / `README.edn` / `migration.edn` / `blueprint.edn` |
 | 文書 | `README.md` / `docs/operator-quickstart.md` / `docs/adr/*.edn` |
 
 **production の TypeScript は 0 本、正本言語（`.cljs`/`.cljc`）が 4 本。**
