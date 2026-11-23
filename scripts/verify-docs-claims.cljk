@@ -21,7 +21,7 @@
 (def APP "appview/etzhayyim-wasm-ongakuka-0ng4k4k4")
 
 (def claims
-  {:tracked-files 50
+  {:tracked-files 51
    :inherited-bytes 6675           ; the 6 inherited files still carried unchanged
    :svelte-artifacts 0             ; no .svelte / svelte.config / svelte-dir file survives
    :sveltekit-compat-flags 0       ; nodejs_compat / nodejs_als were adapter-cloudflare's
@@ -39,7 +39,7 @@
 ;; (src/app.ts)" and the frontend as "Hono router + Svelte CSR", both of which the
 ;; migration made false. Checked by content below instead of by hash.
 (def preserved
-  {"MIGRATION-TODO.md" "793d1da2f465cd692205ebc1d8b38cc6c50502b525226255f74d9a858cd6761f"
+  {"MIGRATION-TODO.md" "3cd866b9b8869f522c0c9f72ffdd0ff27fcdfd3aadd9be3a9a74649d6920e38f"
    "NOTICE" "bae68743feb911cbedcc745b136e444d3595854e4324f59e7cc9438ccda13d49"
    "PROJECT.jsonld" "d9c248b581dd52518c8e5d43f1f0078890a1e9f768f23111153fc7849e58ca58"
    "README.edn" "8a03a25c86d9e7f052aa476acadb7c701f3dc35d4466b014caec51d9abe8259c"
@@ -125,7 +125,7 @@
       (check! :production-ts-files (:production-ts-files claims)
               (count (filter #(str/ends-with? % ".ts") prod)))
       (check! :production-canonical-files (:production-canonical-files claims)
-              (count (filter #(re-find #"\.(cljs|cljc|clj|kotoba)$" %) prod))))
+              (count (filter #(re-find #"\.(cljs|cljc|clj|cljk|kotoba)$" %) prod))))
 
     ;; the deployed bundle is built from the source in this tree
     (let [w (some-> (slurp* (str APP "/wrangler.jsonc")) strip-jsonc)

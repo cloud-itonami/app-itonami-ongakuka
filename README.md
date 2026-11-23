@@ -44,13 +44,13 @@ ingress capability が qualify した時に **最初に `.kotoba` へ移る部�
 `wrangler.jsonc` が route 2・var 8 を宣言していることに気づけなかった。いまは
 route 表を渡す側が持ち、ページは描くだけなので、両者がずれる余地が無い。
 
-## いま在るもの — 50 ファイル
+## いま在るもの — 51 ファイル
 
 | 面 | ファイル |
 |---|---|
 | 判断・描画・edge | `src/ongakuka/{route.cljc, view.cljc, worker.cljs}` |
 | Android (Tauri) | `app/`（WebView 殻 + 実 UI。`app/README.md` に画面インベントリ） |
-| テスト | `test/ongakuka/route_test.cljk`（5 tests / 21 assertions） |
+| テスト | `test/ongakuka/route_test.cljk`（7 tests / 28 assertions） |
 | ビルド | `deps.edn` / `shadow-cljs.edn` |
 | Worker 設定 | `appview/…/wrangler.jsonc` |
 | actor 記述子 | `appview/…/kotodama.jsonld` |
