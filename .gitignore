@@ -9,3 +9,12 @@ node_modules/
 
 # nbb dependency cache -- a build artifact, not source
 .nbb/
+
+# Tauri/Android 生成物（app/）。
+# series app 規約: gen/android, node_modules, target, dist は git 管理しない。
+# .cache/ は build.mjs の静的描画の中間物（毎回再生成）。
+app/dist/
+app/node_modules/
+app/src-tauri/target/
+app/src-tauri/gen/
+.cache/

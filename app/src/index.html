@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="{{CSP}}">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <h1>Ongakuka</h1>
+  <p class="sub">AI Music Generator</p>
+</header>
+
+<main id="panel">
+  <!-- 概要: view.cljk の hiccup を静的描画した ongakuka-static.html（iframe） -->
+  <section data-tab="about">
+    <h2>概要</h2>
+    <iframe id="static-frame" title="appview 説明ページ" src="ongakuka-static.html"></iframe>
+    <p class="note">上記は <code>src/ongakuka/view.cljk</code> の hiccup をビルド時に静的描画したものです（{staticBytes} バイト）。</p>
+  </section>
+
+  <!-- 作曲: compose -->
+  <section data-tab="compose" hidden>
+    <h2>作曲</h2>
+    <form id="compose-form">
+      <label>曲名
+        <input id="compose-title" name="title" type="text" placeholder="例: 朝の光" autocomplete="off">
+      </label>
+      <label>歌詞
+        <textarea id="compose-lyrics" name="lyrics" rows="6" placeholder="歌詞を入力"></textarea>
+      </label>
+      <label>Style prompt
+        <textarea id="compose-style" name="style" rows="3" placeholder="例: 明るいポップス、ピアノ中心"></textarea>
+      </label>
+      <button id="compose-req" type="submit">生成を依頼</button>
+    </form>
+    <div id="compose-result" class="result" aria-live="polite"></div>
+  </section>
+
+  <!-- 一覧: listTracks -->
+  <section data-tab="list" hidden>
+    <h2>曲 一覧</h2>
+    <button id="list-reload" type="button">一覧を取得</button>
+    <ul id="track-list" class="track-list"></ul>
+    <div id="list-error" class="result" aria-live="polite"></div>
+  </section>
+
+  <!-- 詳細: getTrack + stem mixer + critic -->
+  <section data-tab="detail" hidden>
+    <h2>曲 詳細</h2>
+    <form id="detail-form">
+      <label>projectId / trackUri
+        <input id="detail-id" name="trackId" type="text" placeholder="例: track の projectId" autocomplete="off">
+      </label>
+      <button id="detail-req" type="submit">取得</button>
+    </form>
+    <div id="detail-body" aria-live="polite"></div>
+  </section>
+
+  <!-- 設定: worker base URL + consent -->
+  <section data-tab="settings" hidden>
+    <h2>設定</h2>
+    <form id="settings-form">
+      <label>Worker base URL
+        <input id="settings-base" name="base" type="url" inputmode="url">
+      </label>
+      <button id="settings-save" type="submit">保存</button>
+    </form>
+    <div id="settings-note" class="note" aria-live="polite"></div>
+    <h3>通信の承認（origin ごと）</h3>
+    <p class="note">承認していない origin への通信は送信しません。承認はこの端末の localStorage に保存され、<code>tauri://</code> / <code>appassets</code> は免除されます。</p>
+    <ul id="consent-list" class="consent-list"></ul>
+  </section>
+</main>
+
+<nav class="tabs" id="tabs" role="tablist" aria-label="画面の切り替え"></nav>
+
+<dialog id="consent-dialog">
+  <form method="dialog" id="consent-form">
+    <p><strong>通信の承認が必要です</strong></p>
+    <p id="consent-text"></p>
+    <p class="note">承認すると、この origin への作曲・一覧・詳細の送信が可能になります。承認はいつでも設定画面から取り消せます。</p>
+    <div class="dialog-actions">
+      <button id="consent-deny" value="deny" formnovalidate>拒否</button>
+      <button id="consent-allow" value="allow">承認する</button>
+    </div>
+  </form>
+</dialog>
+
+<noscript><p class="problem">この app は JavaScript を使います。</p></noscript>
+<script type="module" src="app.js"></script>
+</body>
+</html>
