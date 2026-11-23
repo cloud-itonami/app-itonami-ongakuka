@@ -202,7 +202,7 @@ export async function build(appRoot = fileURLToPath(new URL("../", import.meta.u
   await writeFile(join(out, "index.html"), index);
   await writeFile(join(out, "ongakuka-static.html"), staticHtml);
   await writeFile(join(out, "dds.css"), ddsCss);
-  for (const name of ["style.css", "app.js", "view.js"]) {
+  for (const name of ["style.css", "app.js", "view.js", "broker.js"]) {
     await copyFile(resolve(appRoot, "src", name), join(out, name));
   }
   await copyFile(resolve(appRoot, "vendor/kotoba-client-runtime.js"), join(out, "vendor/kotoba-client-runtime.js"));
@@ -213,8 +213,6 @@ export async function build(appRoot = fileURLToPath(new URL("../", import.meta.u
     version: meta.version,
     defaultTab: "about",
     defaultBaseUrl: WORKER_ORIGIN,
-    consentKey: "ongakuka.consent.origins",
-    baseUrlKey: "ongakuka.worker.base",
     descriptor,
     sources,
   };
@@ -222,7 +220,7 @@ export async function build(appRoot = fileURLToPath(new URL("../", import.meta.u
   await writeFile(join(out, "descriptor.json"), JSON.stringify(descriptor, null, 2) + "\n");
 
   const names = [
-    "index.html", "style.css", "app.js", "view.js", "data.js", "descriptor.json",
+    "index.html", "style.css", "app.js", "view.js", "broker.js", "data.js", "descriptor.json",
     "ongakuka-static.html", "dds.css",
     "vendor/kotoba-client-runtime.js", "vendor/kotoba-client-consent.css",
   ];

@@ -22,15 +22,10 @@ export function tabFor(id) {
   return TABS.find((tab) => tab.id === id) ?? TABS[0];
 }
 
-export const DEFAULT_BASE_URL = "https://ongakuka.etzhayyim.com";
-export const CONSENT_KEY = "ongakuka.consent.origins";
-export const BASE_URL_KEY = "ongakuka.worker.base";
+/* Consent: each send asks through the broker (broker.js). The page itself
+   holds no destination editable here and never sends on its own. */
 
-/** Origins that never need consent (the local app itself). */
-export function needsConsent(origin) {
-  if (typeof origin !== "string" || origin.length === 0) return false;
-  return !(origin.startsWith("tauri:") || origin.startsWith("appassets:"));
-}
+export const DEFAULT_BASE_URL = "https://ongakuka.etzhayyim.com";
 
 /** A base URL is usable only as an https origin (no trailing slash). */
 export function normalizeBaseUrl(value) {
@@ -57,33 +52,6 @@ export const NSID_HEALTHY_PATH = "/health";
 export const NSID_COMPOSE = "com.etzhayyim.ongakuka.compose";
 export const NSID_LIST_TRACKS = "com.etzhayyim.ongakuka.listTracks";
 export const NSID_GET_TRACK = "com.etzhayyim.ongakuka.getTrack";
-
-/** Parse a consent list read from storage (defensive: anything off becomes []). */
-export function parseConsentList(raw) {
-  if (!Array.isArray(raw)) return [];
-  const out = [];
-  for (const item of raw) {
-    if (typeof item === "string" && item.length > 0 && !out.includes(item)) out.push(item);
-  }
-  return out;
-}
-
-/** Is `origin` approved for the given operation? */
-export function isApproved(approved, origin) {
-  return Array.isArray(approved) && approved.includes(origin);
-}
-
-/** Return a new approved list with `origin` added (no duplicates). */
-export function approve(approved, origin) {
-  const list = parseConsentList(approved);
-  if (!list.includes(origin)) list.push(origin);
-  return list;
-}
-
-/** Return a new approved list with `origin` removed. */
-export function revoke(approved, origin) {
-  return parseConsentList(approved).filter((item) => item !== origin);
-}
 
 /**
  * Unwrap a Worker / MCP-router response body, mirroring

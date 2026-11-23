@@ -6,10 +6,14 @@
   `ongakuka-static.html` を iframe で表示。手書きのコピーではない（`scripts/build.mjs`
   が kbb で再描画し、drift したら fail する）。
 - **作曲 / 一覧 / 詳細**: appview Worker の XRPC (`POST /xrpc/com.etzhayyim.ongakuka.{compose,
-  listTracks,getTrack}`、`GET /health`) を WebView から叩く実クライアント。生成そのものは
-  murakumo の audio 側にあり、ここには無い。
-- **設定**: Worker base URL（既定 `https://ongakuka.etzhayyim.com`、https のみ）と
-  origin ごとの通信承認（localStorage、既定で deny、設定から取消可能）。
+  listTracks,getTrack}`、`GET /health`) を **broker（`src/broker.js`）を介して**叩く実クライアント。
+  ページは「何を送りたいか」を渡すだけ（最小限の body。作曲は曲名・歌詞・style prompt のみで、
+  個人情報を足さない）。送信は broker が行い、送るたびに broker の信頼ダイアログが
+  宛先・操作・データカテゴリを表示して承認を取る。拒否されたら 1 バイトも送らない
+  （`app/test/broker.test.mjs` で「deny → 0 リクエスト」「approve → 正確に 1 リクエスト」を
+  stub で実測）。生成そのものは murakumo の audio 側にあり、ここには無い。
+- **設定**: 接続先は descriptor で宣言された origin（`https://ongakuka.etzhayyim.com`）のみ
+  で、画面から変更できない（それ以外への送信は broker が拒否する）。送れる操作の一覧を表示する。
 
 `package.json` の `itonami.runtime` は `restricted-wasm-v1`。descriptor
 （`dist/descriptor.json`）も同 profile で、4 つの operation はすべて
@@ -39,6 +43,19 @@ cd app && sh scripts/android-apk.sh           # npm ci → build → tauri andro
 
 `scripts/build.mjs` は `~/github/repos/kotoba-lang/{kotoba,jp-go-digital-design-system}`
 の checkout が無いと fail する（`KOTOBA_KBB` / `KOTOBA_LIB` / `KOTOBA_JP_DDS` で差し替え可）。
+
+## ビルド入力の再現性について（handover）
+
+概要ページの静的描画は `scripts/build.mjs` が kbb（kotoba babashka）で再描画します。
+この際の入力は npm / Cargo の依存だけでなく、`~/github/repos/kotoba-lang/{kotoba,
+jp-go-digital-design-system}` の手元の checkout（`kotoba` の `bin/kbb`、`lib/kotoba.{text,
+html,css}`、`jp-go-dds` の src / resources）です。パスは `KOTOBA_KBB` / `KOTOBA_LIB` /
+`KOTOBA_JP_DDS` で差し替えできますが、checkout が無い環境では build が
+「static render needs the kotoba checkouts…」で fail します（古い snapshot への
+フォールバックはしません）。dirty input が隠れた形で再現性を弱めるため、checkout の
+commit（`kotoba` と `jp-go-digital-design-system` の sha）を build log に出す、または
+入力を npm lock のように pin することは後段の改善です（本 PR では README への明記で
+対処しています）。
 
 ## ライセンス
 

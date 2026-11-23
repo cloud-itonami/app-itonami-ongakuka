@@ -60,35 +60,21 @@
     <div id="detail-body" aria-live="polite"></div>
   </section>
 
-  <!-- 設定: worker base URL + consent -->
+  <!-- 設定: descriptor の接続先と送れる操作（送信は broker 経由） -->
   <section data-tab="settings" hidden>
     <h2>設定</h2>
-    <form id="settings-form">
-      <label>Worker base URL
-        <input id="settings-base" name="base" type="url" inputmode="url">
-      </label>
-      <button id="settings-save" type="submit">保存</button>
-    </form>
-    <div id="settings-note" class="note" aria-live="polite"></div>
-    <h3>通信の承認（origin ごと）</h3>
-    <p class="note">承認していない origin への通信は送信しません。承認はこの端末の localStorage に保存され、<code>tauri://</code> / <code>appassets</code> は免除されます。</p>
-    <ul id="consent-list" class="consent-list"></ul>
+    <dl class="meta">
+      <dt>接続先（descriptor の endpoint）</dt><dd id="settings-origin">—</dd>
+      <dt>アプリ</dt><dd id="settings-id">—</dd>
+      <dt>バージョン</dt><dd id="settings-version">—</dd>
+    </dl>
+    <h3>このアプリが送れる操作（broker 経由）</h3>
+    <p class="note">送信は broker 経由です。送るたびに broker の同意ダイアログが宛先・操作・送る項目（データカテゴリ）を表示し、拒否されたら 1 バイトも送りません。接続先は descriptor で宣言された origin のみで、画面から変更できません（それ以外への送信は broker が拒否します）。</p>
+    <ul id="ops-list" class="ops-list"></ul>
   </section>
 </main>
 
 <nav class="tabs" id="tabs" role="tablist" aria-label="画面の切り替え"></nav>
-
-<dialog id="consent-dialog">
-  <form method="dialog" id="consent-form">
-    <p><strong>通信の承認が必要です</strong></p>
-    <p id="consent-text"></p>
-    <p class="note">承認すると、この origin への作曲・一覧・詳細の送信が可能になります。承認はいつでも設定画面から取り消せます。</p>
-    <div class="dialog-actions">
-      <button id="consent-deny" value="deny" formnovalidate>拒否</button>
-      <button id="consent-allow" value="allow">承認する</button>
-    </div>
-  </form>
-</dialog>
 
 <noscript><p class="problem">この app は JavaScript を使います。</p></noscript>
 <script type="module" src="app.js"></script>

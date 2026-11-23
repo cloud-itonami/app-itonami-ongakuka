@@ -5,12 +5,8 @@ import assert from "node:assert/strict";
 import {
   TABS,
   tabFor,
-  needsConsent,
   normalizeBaseUrl,
   xrpcUrl,
-  parseConsentList,
-  isApproved,
-  revoke,
   unwrapResponse,
   trackSummary,
   stemList,
@@ -24,19 +20,6 @@ test("tabs cover the screen inventory (mobile 390x844)", () => {
   );
   assert.equal(tabFor("compose").label, "作曲");
   assert.equal(tabFor("unknown").id, "about", "unknown ids fall back to the first tab");
-});
-
-test("consent is deny-by-default and local origins are exempt", () => {
-  assert.equal(needsConsent("https://ongakuka.etzhayyim.com"), true);
-  assert.equal(needsConsent("tauri://localhost"), false);
-  assert.equal(needsConsent("appassets://localhost"), false);
-  assert.equal(needsConsent(""), false);
-  assert.equal(isApproved([], "https://ongakuka.etzhayyim.com"), false);
-  assert.equal(isApproved(["https://ongakuka.etzhayyim.com"], "https://ongakuka.etzhayyim.com"), true);
-  assert.equal(isApproved(parseConsentList(["https://a", "https://a", 42, ""]), "https://a"), true);
-  assert.deepEqual(revoke(["https://a", "https://b"], "https://a"), ["https://b"]);
-  assert.deepEqual(parseConsentList(null), []);
-  assert.deepEqual(parseConsentList("https://a"), []);
 });
 
 test("base URL is https-only and trailing-slash-free", () => {

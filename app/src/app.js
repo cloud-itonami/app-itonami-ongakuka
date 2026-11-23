@@ -1,18 +1,14 @@
 // Ongakuka WebView shell. All decisions are delegated to view.js; this file
 // only wires the DOM, the network and storage. Every network call goes
-// through `request()`, which enforces per-origin consent (default deny) and
-// the descriptor's endpoint allow-list before sending anything.
+// through the broker (broker.js): the page only states what to send, the
+// broker validates the descriptor scope, asks the trusted consent host and
+// dispatches the captured fetch. Nothing is ever fetched directly.
 import data from "./data.js";
 import {
   TABS,
   tabFor,
-  needsConsent,
   normalizeBaseUrl,
   xrpcUrl,
-  parseConsentList,
-  isApproved,
-  approve,
-  revoke,
   unwrapResponse,
   trackSummary,
   stemList,
@@ -22,92 +18,55 @@ import {
   NSID_LIST_TRACKS,
   NSID_GET_TRACK,
 } from "./view.js";
-import { clientEndpointAllowsRequest } from "./vendor/kotoba-client-runtime.js";
+import { createOngakukaBroker } from "./broker.js";
 
 const REQUEST_TIMEOUT_MS = 15_000;
+const BASE_URL = normalizeBaseUrl(data.defaultBaseUrl) ?? data.defaultBaseUrl;
 
-/* ---------- storage ---------- */
-
-function readRaw(key) {
-  try {
-    const raw = globalThis.localStorage?.getItem(key);
-    return raw === null || raw === undefined ? null : JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-function writeRaw(key, value) {
-  try {
-    globalThis.localStorage?.setItem(key, JSON.stringify(value));
-  } catch {
-    // Storage is best-effort: the app still renders when it throws.
-  }
-}
-
-let approvedOrigins = parseConsentList(readRaw(data.consentKey));
-let baseUrl = normalizeBaseUrl(readRaw(data.baseUrlKey)) ?? data.defaultBaseUrl;
-
-/* ---------- consent ---------- */
-
-const dialog = document.getElementById("consent-dialog");
-let consentResolver = null;
-
-function askConsent(origin) {
-  document.getElementById("consent-text").textContent =
-    `${origin} への通信を承認しますか？`;
-  return new Promise((resolve) => {
-    consentResolver = resolve;
-    dialog.showModal();
-  });
-}
-
-dialog.addEventListener("close", () => {
-  const allowed = dialog.returnValue === "allow";
-  if (allowed) {
-    // The pending origin is recorded on the dialog's dataset by askConsent.
-    approvedOrigins = approve(approvedOrigins, dialog.dataset.origin);
-    writeRaw(data.consentKey, approvedOrigins);
-  }
-  consentResolver?.(allowed);
-  consentResolver = null;
+const broker = createOngakukaBroker({
+  document: globalThis.document,
+  descriptor: data.descriptor,
 });
 
-async function ensureConsent(origin) {
-  if (!needsConsent(origin)) return true;
-  if (isApproved(approvedOrigins, origin)) return true;
-  dialog.dataset.origin = origin;
-  return askConsent(origin);
+function operationByName(name) {
+  const operation = data.descriptor.operations.find((entry) => entry.operation === name);
+  if (!operation) throw new Error(`operation not declared: ${name}`);
+  return operation;
 }
 
-/* ---------- network ---------- */
-
-function originOf(url) {
-  try {
-    return new URL(url, globalThis.location?.origin).origin;
-  } catch {
-    return "";
-  }
+function invokeUrl(path) {
+  if (!path.startsWith("/xrpc/")) return `${BASE_URL}${path}`;
+  return xrpcUrl(BASE_URL, path.slice(6));
 }
 
-async function request({ method, path, body }) {
-  const url = path.startsWith("/xrpc/") ? xrpcUrl(baseUrl, path.slice(6)) ?? null : `${baseUrl}${path}`;
-  if (url === null) throw new Error("invalid request");
-  const origin = originOf(url);
-  if (!clientEndpointAllowsRequest(descriptorEndpoint(method, path), url, method)) {
-    throw new Error(`endpoint not declared: ${url}`);
-  }
-  const consented = await ensureConsent(origin);
-  if (!consented) throw new Error("denied by user");
+/**
+ * Send one declared operation through the broker. Fails closed: any broker
+ * refusal (unapproved consent, undeclared scope, missing trusted document)
+ * is thrown and nothing was sent.
+ */
+async function request({ operation, method, path, body }) {
+  const operationEntry = operationByName(operation);
+  const url = invokeUrl(path);
+  const init = body === undefined
+    ? { method }
+    : {
+        method,
+        headers: { "content-type": "application/json" },
+        // Minimal body: only the fields the endpoint needs, nothing else.
+        body: JSON.stringify(body),
+      };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetch(url, {
-      method,
-      headers: body === undefined ? {} : { "content-type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal: controller.signal,
-    });
+    const response = await broker.invoke(
+      {
+        capability: operationEntry.capability,
+        service: operationEntry.service,
+        operation: operationEntry.operation,
+      },
+      { input: url, init },
+      { signal: controller.signal },
+    );
     const text = await response.text();
     let payload = text;
     try {
@@ -126,17 +85,6 @@ async function request({ method, path, body }) {
   } finally {
     clearTimeout(timer);
   }
-}
-
-function descriptorEndpoint(method, path) {
-  for (const operation of Object.values(data.descriptor.operations)) {
-    const endpoint = operation.endpoint;
-    if (endpoint.method !== method) continue;
-    // Exact path, plus the single XRPC proxy pattern (path segment :nsid).
-    if (endpoint.path === path) return endpoint;
-    if (endpoint.path === "/xrpc/:nsid" && path.startsWith("/xrpc/")) return endpoint;
-  }
-  return { origin: originOf(baseUrl), method, path };
 }
 
 /* ---------- tabs ---------- */
@@ -179,12 +127,14 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
     out.textContent = "歌詞が空です。歌詞を入力してから送信してください。";
     return;
   }
-  out.textContent = "送信中…";
+  out.textContent = "送信中…（broker の承認ダイアログで宛先と内容を確認してください）";
   try {
+    // Minimal body: 曲名・歌詞・style prompt のみ。個人情報を足さない。
     const value = await request({
+      operation: "compose",
       method: "POST",
       path: `/xrpc/${NSID_COMPOSE}`,
-      body: { projectId: title, title, lyrics, style },
+      body: { title, lyrics, style },
     });
     out.textContent = `依頼を受け付けました: ${JSON.stringify(value).slice(0, 400)}`;
     document.getElementById("detail-id").value =
@@ -200,9 +150,10 @@ document.getElementById("list-reload").addEventListener("click", async () => {
   const list = document.getElementById("track-list");
   const errors = document.getElementById("list-error");
   list.replaceChildren();
-  errors.textContent = "取得中…";
+  errors.textContent = "取得中…（broker の承認ダイアログで宛先と内容を確認してください）";
   try {
     const value = await request({
+      operation: "list-tracks",
       method: "POST",
       path: `/xrpc/${NSID_LIST_TRACKS}`,
       body: { offset: 0, limit: 20 },
@@ -243,9 +194,10 @@ document.getElementById("detail-form").addEventListener("submit", async (event) 
     body.textContent = "projectId を入力してください。";
     return;
   }
-  body.textContent = "取得中…";
+  body.textContent = "取得中…（broker の承認ダイアログで宛先と内容を確認してください）";
   try {
     const value = await request({
+      operation: "get-track",
       method: "POST",
       path: `/xrpc/${NSID_GET_TRACK}`,
       body: { projectId: trackId },
@@ -311,52 +263,25 @@ document.getElementById("detail-form").addEventListener("submit", async (event) 
 
 /* ---------- settings ---------- */
 
-const settingsBase = document.getElementById("settings-base");
-settingsBase.value = baseUrl;
-document.getElementById("settings-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const note = document.getElementById("settings-note");
-  const normalized = normalizeBaseUrl(settingsBase.value);
-  if (normalized === null) {
-    note.textContent = "https:// の URL を入力してください。";
-    return;
-  }
-  baseUrl = normalized;
-  writeRaw(data.baseUrlKey, baseUrl);
-  settingsBase.value = baseUrl;
-  note.textContent = `保存しました: ${baseUrl}`;
-  renderConsentList();
-});
+// The endpoint origin is declared in the descriptor and enforced by the
+// broker; there is nothing to edit (an editable destination would be an
+// undeclared scope, and the broker refuses to send to it).
+document.getElementById("settings-origin").textContent = BASE_URL;
+document.getElementById("settings-id").textContent = data.identity.id;
+document.getElementById("settings-version").textContent = data.version;
 
-function renderConsentList() {
-  const list = document.getElementById("consent-list");
-  list.replaceChildren();
-  const items = parseConsentList(approvedOrigins);
-  if (items.length === 0) {
-    const empty = document.createElement("li");
-    empty.textContent = "（承認済みの origin はありません）";
-    list.appendChild(empty);
-    return;
-  }
-  for (const origin of items) {
-    const item = document.createElement("li");
-    item.textContent = origin;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = "取り消し";
-    button.addEventListener("click", () => {
-      approvedOrigins = revoke(approvedOrigins, origin);
-      writeRaw(data.consentKey, approvedOrigins);
-      renderConsentList();
-    });
-    item.appendChild(button);
-    list.appendChild(item);
-  }
+const opsList = document.getElementById("ops-list");
+for (const operation of data.descriptor.operations) {
+  const item = document.createElement("li");
+  const label = document.createElement("span");
+  label.textContent =
+    `${operation.operation} — ${operation.endpoint.method} ${operation.endpoint.origin}${operation.endpoint.path}` +
+    `（データ: ${operation["data-categories"].length > 0 ? operation["data-categories"].join(", ") : "なし"}）`;
+  item.appendChild(label);
+  opsList.appendChild(item);
 }
-
-renderConsentList();
 
 // Health probe (GET /health) — the declared read-only operation.
 export async function healthCheck() {
-  return request({ method: "GET", path: NSID_HEALTHY_PATH });
+  return request({ operation: "health", method: "GET", path: NSID_HEALTHY_PATH });
 }
