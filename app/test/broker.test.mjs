@@ -78,11 +78,28 @@ function fakeWorld(nowRef) {
   return { doc, dialog, findByText };
 }
 
+// Test-only stub origin. descriptor endpoints carry the production origin;
+// for the deny/approve measurement this test swaps in a test descriptor
+// whose endpoints point at the stub origin, so nothing can ever reach
+// ongakuka.etzhayyim.com (the fetch is stubbed in any case).
+const STUB_ORIGIN = "https://localhost:8787";
+
+function stubDescriptor(realDescriptor) {
+  return {
+    ...realDescriptor,
+    operations: realDescriptor.operations.map((operation) => ({
+      ...operation,
+      endpoint: { ...operation.endpoint, origin: STUB_ORIGIN },
+    })),
+  };
+}
+
 async function buildBroker(nowRef, calls) {
   const fake = fakeWorld(nowRef);
   const previousDocument = globalThis.document;
   globalThis.document = fake.doc;
-  const descriptor = JSON.parse(await readFile(join(APP, "dist/descriptor.json"), "utf8"));
+  const realDescriptor = JSON.parse(await readFile(join(APP, "dist/descriptor.json"), "utf8"));
+  const descriptor = stubDescriptor(realDescriptor);
   const stubFetch = async (input) => {
     const url = typeof input === "string" ? input : input.url;
     const method = typeof input?.method === "string" ? input.method : "GET";
@@ -113,7 +130,7 @@ function composeRequest(descriptor) {
       operation: operation.operation,
     },
     payload: {
-      input: "https://ongakuka.etzhayyim.com/xrpc/com.etzhayyim.ongakuka.compose",
+      input: `${STUB_ORIGIN}/xrpc/com.etzhayyim.ongakuka.compose`,
       init: {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -136,7 +153,7 @@ test("deny sends zero requests", async () => {
     const dialog = fake.dialog();
     assert.equal(dialog.open, true, "the trusted consent dialog was shown");
     const scope = dialog.children[1];
-    assert.ok(scope.textContent.includes("https://ongakuka.etzhayyim.com"), "dialog shows the endpoint");
+    assert.ok(scope.textContent.includes(STUB_ORIGIN), "dialog shows the stub endpoint");
     assert.ok(scope.textContent.includes("lyrics"), "dialog shows the data categories");
     const denyButton = fake.findByText("Deny");
     assert.ok(denyButton, "deny button exists");
@@ -170,7 +187,11 @@ test("approve sends exactly one broker-scoped request", async () => {
     const response = await invokePromise;
     assert.equal(response.ok, true);
     assert.equal(calls.length, 1, "approve → exactly 1 request");
-    assert.equal(calls[0].url, "https://ongakuka.etzhayyim.com/xrpc/com.etzhayyim.ongakuka.compose");
+    assert.equal(calls[0].url, `${STUB_ORIGIN}/xrpc/com.etzhayyim.ongakuka.compose`);
+    assert.ok(
+      calls.every((call) => !call.url.includes("ongakuka.etzhayyim.com")),
+      "no request ever addressed the production origin",
+    );
     assert.equal(calls[0].method, "POST");
     assert.deepEqual(JSON.parse(calls[0].body), { title: "t", lyrics: "l", style: "s" });
   } finally {
