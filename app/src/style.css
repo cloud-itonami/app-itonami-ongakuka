@@ -142,7 +142,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   display: flex;
   border-top: 1px solid var(--line);
   background: var(--bg);
-  padding-bottom: env(safe-area-inset-bottom);
+  /* ジェスチャナビ端末では env(safe-area-inset-bottom) が 0px になり、
+     タブが画面下端のジェスチャ帯に重なってタップが OS に消費され
+     タブ切替が届かないことがあるため、最小 inset を保証する。 */
+  padding-bottom: max(env(safe-area-inset-bottom), 48px);
 }
 .tabs button {
   flex: 1;
