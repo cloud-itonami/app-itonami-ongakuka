@@ -1,0 +1,1 @@
+{"identifier":"main","description":"No commands exposed. Network is declared in the WebView client-runtime descriptor (descriptor.json) and gated per origin in app.js.","windows":["main"],"permissions":[]}

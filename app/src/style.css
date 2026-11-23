@@ -1,0 +1,173 @@
+/* Ongakuka WebView shell — スマホ幅 390x844 基準の minimal styling。
+   色・寸法は CSS カスタムプロパティに閉じ、ダーク対応は prefers-color-scheme。 */
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #5a5a5a;
+  --line: #d8d8d8;
+  --panel: #f5f5f5;
+  --accent: #1f4e79;
+  --focus: #0b5fff;
+  --ok: #1d6b3c;
+  --warn: #8a5a00;
+  --critical: #b00020;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141414;
+    --fg: #f0f0f0;
+    --muted: #b5b5b5;
+    --line: #3d3d3d;
+    --panel: #1e1e1e;
+    --accent: #9dc3ee;
+    --focus: #8ab4ff;
+    --ok: #7fd79a;
+    --warn: #ffcf5c;
+    --critical: #ff8a9a;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  max-width: 560px;
+  margin-inline: auto;
+}
+
+.top {
+  padding: 16px 20px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.top h1 { margin: 0; font-size: 1.375rem; }
+.top .sub { margin: 0; color: var(--muted); font-size: 0.875rem; }
+
+main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px 24px;
+}
+
+h2 { font-size: 1.125rem; margin: 0 0 12px; }
+h3 { font-size: 1rem; margin: 16px 0 8px; }
+
+label { display: block; margin: 12px 0; font-weight: 600; }
+input, textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+button {
+  font: inherit;
+  padding: 10px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #ffffff;
+  cursor: pointer;
+}
+button:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.track-list { list-style: none; margin: 12px 0; padding: 0; }
+
+.result { margin-top: 12px; padding: 10px 12px; background: var(--panel); border-radius: 8px; white-space: pre-wrap; word-break: break-all; font-size: 0.875rem; }
+.result:empty { display: none; }
+
+.note { color: var(--muted); font-size: 0.875rem; }
+.problem { color: var(--critical); }
+
+.meta { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 12px 0; }
+.meta dt { color: var(--muted); font-size: 0.875rem; }
+.meta dd { margin: 0; word-break: break-all; }
+
+.ops-list { list-style: none; margin: 12px 0; padding: 0; }
+.ops-list li { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; word-break: break-all; font-size: 0.875rem; }
+
+#static-frame {
+  width: 100%;
+  height: 60vh;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.track-list, .consent-list { list-style: none; margin: 12px 0; padding: 0; }
+.track-list li, .consent-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  word-break: break-all;
+}
+.track-list button { background: transparent; color: var(--accent); border-color: var(--accent); }
+.consent-list button { padding: 4px 10px; font-size: 0.875rem; background: transparent; color: var(--critical); border-color: var(--critical); }
+
+.stem-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.stem-row audio { width: 100%; }
+.stem-row input[type="range"] { width: 100%; margin: 0; }
+
+.tabs {
+  display: flex;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tabs button {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 12px 4px 10px;
+  font-size: 0.875rem;
+  border-top: 2px solid transparent;
+  margin-top: -1px;
+}
+.tabs button[aria-selected="true"] {
+  color: var(--accent);
+  border-top-color: var(--accent);
+}
+
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--fg);
+  max-width: 22rem;
+  padding: 20px;
+}
+.dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+[hidden] { display: none !important; }
